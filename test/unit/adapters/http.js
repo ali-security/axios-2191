@@ -2,6 +2,11 @@ var axios = require('../../../index');
 var http = require('http');
 var https = require('https');
 var net = require('net');
+// Pre-load `dns` so it isn't lazy-required from inside an http request
+// after a test pollutes `Object.prototype.get` — on older Node versions
+// the lazy `Object.defineProperty` call in dns.js inherits the polluted
+// getter and throws "Getter must be a function".
+require('dns');
 var url = require('url');
 var zlib = require('zlib');
 var assert = require('assert');
@@ -11,6 +16,18 @@ var pkg = require('./../../../package.json');
 var server, proxy;
 
 describe('supports http with nodejs', function () {
+
+  function clearPrototypePollution() {
+    delete Object.prototype.auth;
+    delete Object.prototype.username;
+    delete Object.prototype.password;
+    delete Object.prototype.common;
+    delete Object.prototype.get;
+    delete Object.prototype.post;
+  }
+
+  // Defensive: clear before each test in case another suite left pollution.
+  beforeEach(clearPrototypePollution);
 
   afterEach(function () {
     if (server) {
@@ -26,6 +43,7 @@ describe('supports http with nodejs', function () {
     delete process.env.https_proxy;
     delete process.env.no_proxy;
     delete process.env.NO_PROXY;
+    clearPrototypePollution();
   });
 
   it('should sanitize request headers containing invalid characters', function (done) {
@@ -980,6 +998,102 @@ describe('supports http with nodejs', function () {
           done();
         });
       });
+    });
+  });
+
+  it('should not use inherited proxy auth credentials', function (done) {
+    Object.prototype.auth = {};
+    Object.prototype.username = 'polluted-user';
+    Object.prototype.password = 'polluted-pass';
+
+    server = http.createServer(function (req, res) {
+      res.end();
+    }).listen(4444, function () {
+      proxy = http.createServer(function (request, response) {
+        var parsed = url.parse(request.url);
+        var opts = Object.create(null);
+        opts.host = parsed.hostname;
+        opts.port = parsed.port;
+        opts.path = parsed.path;
+        opts.auth = undefined;
+        var proxyAuth = request.headers['proxy-authorization'];
+
+        http.get(opts, function (res) {
+          res.on('data', function () {});
+          res.on('end', function () {
+            response.setHeader('Content-Type', 'text/html; charset=UTF-8');
+            response.end(proxyAuth || '');
+          });
+        });
+      }).listen(4000, function () {
+        axios.get('http://localhost:4444/', {
+          proxy: {
+            host: 'localhost',
+            port: 4000
+          }
+        }).then(function (res) {
+          assert.equal(res.data, '');
+          done();
+        }).catch(done);
+      });
+    });
+  });
+
+  it('should not send inherited header buckets on GET requests', function (done) {
+    var inheritedHeaderBuckets = Object.create(null);
+    inheritedHeaderBuckets.common = { 'x-polluted-common': 'yes' };
+    inheritedHeaderBuckets.get = { 'x-polluted-get': 'yes' };
+
+    server = http.createServer(function (req, res) {
+      assert.strictEqual(req.headers['x-polluted-common'], undefined);
+      assert.strictEqual(req.headers['x-polluted-get'], undefined);
+      assert.strictEqual(req.headers['x-request'], 'request');
+      res.end('ok');
+    }).listen(4444, function () {
+      var requestHeaders = Object.create(inheritedHeaderBuckets);
+      requestHeaders['x-request'] = 'request';
+
+      axios.get('http://localhost:4444/', {
+        headers: requestHeaders
+      }).then(function () {
+        done();
+      }).catch(done);
+    });
+  });
+
+  it('should not send inherited header buckets on requests with a body', function (done) {
+    server = http.createServer(function (req, res) {
+      assert.strictEqual(req.headers['x-polluted-common'], undefined);
+      assert.strictEqual(req.headers['x-polluted-post'], undefined);
+      assert.strictEqual(req.headers['x-own-common'], 'default');
+      assert.strictEqual(req.headers['x-own-post'], 'method');
+      assert.strictEqual(req.headers['x-request'], 'request');
+      req.on('data', function () {});
+      req.on('end', function () {
+        res.end('ok');
+      });
+    }).listen(4444, function () {
+      Object.prototype.common = { 'x-polluted-common': 'yes' };
+      Object.prototype.post = { 'x-polluted-post': 'yes' };
+
+      var instance = axios.create({
+        headers: {
+          common: {
+            'x-own-common': 'default'
+          },
+          post: {
+            'x-own-post': 'method'
+          }
+        }
+      });
+
+      instance.post('http://localhost:4444/', 'body', {
+        headers: {
+          'x-request': 'request'
+        }
+      }).then(function () {
+        done();
+      }).catch(done);
     });
   });
 
