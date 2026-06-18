@@ -5,6 +5,12 @@ describe('Prototype Pollution Protection', function() {
   afterEach(function() {
     // Clean up any pollution that might have occurred
     delete Object.prototype.polluted;
+    delete Object.prototype.transport;
+    delete Object.prototype.transformRequest;
+    delete Object.prototype.transformResponse;
+    delete Object.prototype.formSerializer;
+    delete Object.prototype.env;
+    delete Object.prototype.parseReviver;
   });
 
   describe('utils.merge', function() {
@@ -182,6 +188,39 @@ describe('Prototype Pollution Protection', function() {
       expect(Object.prototype.polluted).toEqual(undefined);
       expect(result.customProp.safe).toEqual('value');
       expect(result.customProp.hasOwnProperty('__proto__')).toEqual(false);
+    });
+
+    it("should not inherit transport from Object.prototype", function () {
+      Object.prototype.transport = { request: function () {} };
+      var result = mergeConfig({}, { url: "/a" });
+      expect(result.hasOwnProperty("transport")).toEqual(false);
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "transport")
+      ).toEqual(false);
+    });
+
+    it("should not inherit transformRequest from Object.prototype", function () {
+      Object.prototype.transformRequest = function () { return "hijacked"; };
+      var result = mergeConfig({}, { url: "/a" });
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "transformRequest")
+      ).toEqual(false);
+    });
+
+    it("should not inherit transformResponse from Object.prototype", function () {
+      Object.prototype.transformResponse = function () { return "hijacked"; };
+      var result = mergeConfig({}, { url: "/a" });
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "transformResponse")
+      ).toEqual(false);
+    });
+
+    it("should not inherit arbitrary keys from Object.prototype", function () {
+      Object.prototype.polluted = "yes";
+      var result = mergeConfig({}, { url: "/a" });
+      expect(
+        Object.prototype.hasOwnProperty.call(result, "polluted")
+      ).toEqual(false);
     });
 
     it('should still merge configs correctly', function() {
