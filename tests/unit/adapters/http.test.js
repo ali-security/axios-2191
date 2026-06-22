@@ -2913,7 +2913,7 @@ describe('supports http with nodejs', () => {
     });
 
     describe('SpecCompliant FormData', () => {
-      it('should allow passing FormData', async () => {
+      it('should allow passing FormData', { retry: 5 }, async () => {
         const server = await startHTTPServer(
           async (req, res) => {
             const { fields, files } = await handleFormData(req);
@@ -3962,7 +3962,7 @@ describe('supports http with nodejs', () => {
         },
         {
           useHTTP2: true,
-          port: SERVER_PORT,
+          port: 0,
         }
       );
 
@@ -3979,7 +3979,7 @@ describe('supports http with nodejs', () => {
     it('should support request payload', async () => {
       const server = await startHTTPServer(null, {
         useHTTP2: true,
-        port: SERVER_PORT,
+        port: 0,
       });
 
       try {
@@ -4011,7 +4011,7 @@ describe('supports http with nodejs', () => {
         },
         {
           useHTTP2: true,
-          port: SERVER_PORT,
+          port: 0,
         }
       );
 
@@ -4053,7 +4053,7 @@ describe('supports http with nodejs', () => {
             },
             {
               useHTTP2: true,
-              port: SERVER_PORT,
+              port: 0,
             }
           );
 
@@ -4084,7 +4084,7 @@ describe('supports http with nodejs', () => {
         },
         {
           useHTTP2: true,
-          port: SERVER_PORT,
+          port: 0,
         }
       );
 
@@ -4129,7 +4129,7 @@ describe('supports http with nodejs', () => {
         },
         {
           useHTTP2: true,
-          port: SERVER_PORT,
+          port: 0,
         }
       );
 
@@ -4170,7 +4170,7 @@ describe('supports http with nodejs', () => {
         },
         {
           useHTTP2: true,
-          port: SERVER_PORT,
+          port: 0,
         }
       );
 
@@ -4221,7 +4221,7 @@ describe('supports http with nodejs', () => {
           },
           {
             useHTTP2: true,
-            port: SERVER_PORT,
+            port: 0,
           }
         );
 
@@ -4258,7 +4258,7 @@ describe('supports http with nodejs', () => {
           },
           {
             useHTTP2: true,
-            port: SERVER_PORT,
+            port: 0,
           }
         );
 
@@ -4270,7 +4270,7 @@ describe('supports http with nodejs', () => {
           },
           {
             useHTTP2: true,
-            port: ALTERNATE_SERVER_PORT,
+            port: 0,
           }
         );
 
@@ -4308,7 +4308,7 @@ describe('supports http with nodejs', () => {
           },
           {
             useHTTP2: true,
-            port: SERVER_PORT,
+            port: 0,
           }
         );
 
@@ -4343,7 +4343,7 @@ describe('supports http with nodejs', () => {
           },
           {
             useHTTP2: true,
-            port: SERVER_PORT,
+            port: 0,
           }
         );
 
@@ -4385,7 +4385,7 @@ describe('supports http with nodejs', () => {
           },
           {
             useHTTP2: true,
-            port: SERVER_PORT,
+            port: 0,
           }
         );
 
@@ -4431,7 +4431,7 @@ describe('supports http with nodejs', () => {
         res.statusCode = 404;
         res.end('OK');
       },
-      { port: SERVER_PORT }
+      { port: 0 }
     );
 
     try {

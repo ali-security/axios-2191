@@ -118,6 +118,7 @@
     "examples": "node ./examples/server.js",
     "lint": "eslint lib/**/*.js",
     "fix": "eslint --fix lib/**/*.js",
+    "prepack": "npm run build",
     "prepare": "husky"
   },
   "dependencies": {
