@@ -732,7 +732,7 @@ describe.runIf(typeof fetch === 'function')('supports fetch with nodejs', () => 
     });
   });
 
-  describe('size limits (GHSA-777c-7fjr-54vf)', () => {
+  describe('size limits', () => {
     it('should reject an outbound body that exceeds maxBodyLength with ERR_BAD_REQUEST', async () => {
       const server = await startHTTPServer(
         (req, res) => {
@@ -821,20 +821,18 @@ describe.runIf(typeof fetch === 'function')('supports fetch with nodejs', () => 
 
     it('should reject a data: URL whose decoded size exceeds maxContentLength (base64)', async () => {
       const payload = 'A'.repeat(4096);
-      const dataUrl = 'data:application/octet-stream;base64,' + Buffer.from(payload).toString('base64');
+      const dataUrl =
+        'data:application/octet-stream;base64,' + Buffer.from(payload).toString('base64');
 
       // Use a dedicated instance without baseURL — combineURLs would otherwise
       // prepend baseURL to a data: URL and neutralise the pre-check.
       const bareAxios = axios.create({ adapter: 'fetch' });
 
-      await assert.rejects(
-        bareAxios.get(dataUrl, { maxContentLength: 16 }),
-        (err) => {
-          assert.strictEqual(err.code, 'ERR_BAD_RESPONSE');
-          assert.match(err.message, /maxContentLength size of 16 exceeded/);
-          return true;
-        }
-      );
+      await assert.rejects(bareAxios.get(dataUrl, { maxContentLength: 16 }), (err) => {
+        assert.strictEqual(err.code, 'ERR_BAD_RESPONSE');
+        assert.match(err.message, /maxContentLength size of 16 exceeded/);
+        return true;
+      });
     });
 
     it('should reject a data: URL whose body size exceeds maxContentLength (non-base64)', async () => {
@@ -842,14 +840,11 @@ describe.runIf(typeof fetch === 'function')('supports fetch with nodejs', () => 
 
       const bareAxios = axios.create({ adapter: 'fetch' });
 
-      await assert.rejects(
-        bareAxios.get(dataUrl, { maxContentLength: 16 }),
-        (err) => {
-          assert.strictEqual(err.code, 'ERR_BAD_RESPONSE');
-          assert.match(err.message, /maxContentLength size of 16 exceeded/);
-          return true;
-        }
-      );
+      await assert.rejects(bareAxios.get(dataUrl, { maxContentLength: 16 }), (err) => {
+        assert.strictEqual(err.code, 'ERR_BAD_RESPONSE');
+        assert.match(err.message, /maxContentLength size of 16 exceeded/);
+        return true;
+      });
     });
 
     it('should allow a response at or below maxContentLength', async () => {
