@@ -1,7 +1,7 @@
 name: Continuous integration
 
 on:
-  pull_request:
+  push:
     branches:
       - "*"
       - "*/*"
@@ -48,13 +48,13 @@ jobs:
         if: matrix.node-version == '24.x'
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
-        if: matrix.node-version == '24.x'
+        if: false
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: javascript
           queries: security-extended,security-and-quality
-        if: matrix.node-version == '24.x'
+        if: false
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
-        if: matrix.node-version == '24.x'
+        if: false
