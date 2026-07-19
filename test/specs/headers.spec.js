@@ -156,4 +156,20 @@ describe('headers', function () {
     });
 
   });
+
+  describe('header value sanitization (GHSA-fvcv-3m26-pcqx)', function () {
+    it('should sanitize CRLF characters in header values', function (done) {
+      axios('/foo', {
+        headers: { 'x-test': '\tok\r\nInjected: yes ' },
+      });
+
+      getAjaxRequest().then(function (request) {
+        expect(request.requestHeaders['x-test']).toEqual('okInjected: yes');
+        expect(request.requestHeaders['Injected']).toEqual(undefined);
+        request.respondWith({ status: 200 });
+        done();
+      });
+    });
+  });
+
 });

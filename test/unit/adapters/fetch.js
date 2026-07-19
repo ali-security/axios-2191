@@ -36,7 +36,26 @@ describe('supports fetch with nodejs', function () {
   });
 
   describe('responses', async () => {
-    it(`should support text response type`, async () => {
+    it('should sanitize request headers containing CRLF characters', async function () {
+    this.timeout(10000);
+    server = await startHTTPServer(
+      (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ xTest: req.headers['x-test'], injected: req.headers.injected === undefined ? null : req.headers.injected }));
+      }
+    );
+    try {
+      const { data } = await fetchAxios.get(LOCAL_SERVER_URL + '/', {
+        headers: { 'x-test': '\tok\r\nInjected: yes ' },
+      });
+      assert.strictEqual(data.xTest, 'okInjected: yes');
+      assert.strictEqual(data.injected, null);
+    } finally {
+      await stopHTTPServer(server);
+    }
+  });
+
+  it(`should support text response type`, async () => {
       const originalData = 'my data';
 
       server = await startHTTPServer((req, res) => res.end(originalData));

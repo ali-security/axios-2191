@@ -148,6 +148,26 @@ describe('supports http with nodejs', function () {
     });
   });
 
+  it('should sanitize request headers containing CRLF characters', async function () {
+    this.timeout(10000);
+    const server = await startHTTPServer(
+      (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ xTest: req.headers['x-test'], injected: req.headers.injected === undefined ? null : req.headers.injected }));
+      },
+      { port: SERVER_PORT }
+    );
+    try {
+      const { data } = await axios.get(`http://localhost:${server.address().port}/`, {
+        headers: { 'x-test': '\tok\r\nInjected: yes ' },
+      });
+      assert.strictEqual(data.xTest, 'okInjected: yes');
+      assert.strictEqual(data.injected, null);
+    } finally {
+      await stopHTTPServer(server);
+    }
+  });
+
   it('should parse the timeout property', function (done) {
 
     server = http.createServer(function (req, res) {
