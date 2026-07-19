@@ -1199,6 +1199,76 @@ describe('supports http with nodejs', function () {
     });
   });
 
+  it('should not use proxy for localhost with trailing dot when listed in no_proxy', async function () {
+    this.timeout(10000);
+    const originalHttpProxy = process.env.http_proxy;
+    const originalHTTPProxy = process.env.HTTP_PROXY;
+    const originalNoProxy = process.env.no_proxy;
+    const originalNOProxy = process.env.NO_PROXY;
+
+    let proxyRequests = 0;
+    const proxyServer = await startHTTPServer(
+      (_, response) => {
+        proxyRequests += 1;
+        response.end('proxied');
+      },
+      { port: 4447 }
+    );
+
+    const noProxyValue = 'localhost,127.0.0.1,::1';
+    const proxyUrl = `http://localhost:${proxyServer.address().port}/`;
+    process.env.http_proxy = proxyUrl;
+    process.env.HTTP_PROXY = proxyUrl;
+    process.env.no_proxy = noProxyValue;
+    process.env.NO_PROXY = noProxyValue;
+
+    try {
+      await assert.rejects(axios.get('http://localhost.:1/', { timeout: 100 }));
+      assert.equal(proxyRequests, 0, 'should not use proxy for localhost with trailing dot');
+    } finally {
+      await stopHTTPServer(proxyServer);
+      process.env.http_proxy = originalHttpProxy || '';
+      process.env.HTTP_PROXY = originalHTTPProxy || '';
+      process.env.no_proxy = originalNoProxy || '';
+      process.env.NO_PROXY = originalNOProxy || '';
+    }
+  });
+
+  it('should not use proxy for bracketed IPv6 loopback when listed in no_proxy', async function () {
+    this.timeout(10000);
+    const originalHttpProxy = process.env.http_proxy;
+    const originalHTTPProxy = process.env.HTTP_PROXY;
+    const originalNoProxy = process.env.no_proxy;
+    const originalNOProxy = process.env.NO_PROXY;
+
+    let proxyRequests = 0;
+    const proxyServer = await startHTTPServer(
+      (_, response) => {
+        proxyRequests += 1;
+        response.end('proxied');
+      },
+      { port: 4447 }
+    );
+
+    const noProxyValue = 'localhost,127.0.0.1,::1';
+    const proxyUrl = `http://localhost:${proxyServer.address().port}/`;
+    process.env.http_proxy = proxyUrl;
+    process.env.HTTP_PROXY = proxyUrl;
+    process.env.no_proxy = noProxyValue;
+    process.env.NO_PROXY = noProxyValue;
+
+    try {
+      await assert.rejects(axios.get('http://[::1]:1/', { timeout: 100 }));
+      assert.equal(proxyRequests, 0, 'should not use proxy for IPv6 loopback');
+    } finally {
+      await stopHTTPServer(proxyServer);
+      process.env.http_proxy = originalHttpProxy || '';
+      process.env.HTTP_PROXY = originalHTTPProxy || '';
+      process.env.no_proxy = originalNoProxy || '';
+      process.env.NO_PROXY = originalNOProxy || '';
+    }
+  });
+
   it('should use proxy for domains not in no_proxy', function (done) {
     server = http.createServer(function (req, res) {
       res.setHeader('Content-Type', 'text/html; charset=UTF-8');
