@@ -1877,7 +1877,57 @@ describe('supports http with nodejs', function () {
       });
     });
 
-    describe('toFormData helper', function () {
+    describe('prototype pollution (GHSA-6chq-wfr3-2hj9)', function () {
+    const pollutedKeys = ['getHeaders', 'append', 'pipe', 'on', 'once'];
+    const toStringTagSym = Symbol.toStringTag;
+
+    function pollute() {
+      Object.prototype[toStringTagSym] = 'FormData';
+      Object.prototype.append = () => {};
+      Object.prototype.getHeaders = () => ({
+        'x-injected': 'attacker',
+        'authorization': 'Bearer ATTACKER_TOKEN',
+      });
+      Object.prototype.pipe = function (d) { if (d && d.end) d.end(); return d; };
+      Object.prototype.on = function () { return this; };
+      Object.prototype.once = function () { return this; };
+    }
+
+    function cleanup() {
+      for (const k of pollutedKeys) delete Object.prototype[k];
+      delete Object.prototype[toStringTagSym];
+    }
+
+    it('should not merge prototype-polluted getHeaders into outgoing request', async function () {
+      this.timeout(10000);
+      let receivedHeaders;
+      const server = await startHTTPServer(
+        (req, res) => {
+          receivedHeaders = req.headers;
+          res.end('{}');
+        },
+        { port: SERVER_PORT }
+      );
+
+      try {
+        pollute();
+        await axios.post(
+          `http://localhost:${server.address().port}/`,
+          { userId: 42 },
+          { headers: { 'Authorization': 'Bearer VALID_USER_TOKEN' } }
+        );
+      } finally {
+        cleanup();
+        await stopHTTPServer(server);
+      }
+
+      assert.ok(receivedHeaders, 'request did not reach server');
+      assert.strictEqual(receivedHeaders['x-injected'], undefined);
+      assert.notStrictEqual(receivedHeaders['authorization'], 'Bearer ATTACKER_TOKEN');
+    });
+  });
+
+  describe('toFormData helper', function () {
       it('should properly serialize nested objects for parsing with multer.js (express.js)', function (done) {
         var app = express();
 
